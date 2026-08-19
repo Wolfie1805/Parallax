@@ -261,6 +261,9 @@ function buildSatelliteShortTrail(lat: number, lng: number, radius = 1.15): THRE
   return points
 }
 
+const DUMMY = new THREE.Object3D()
+const COLOR_TMP = new THREE.Color()
+
 // ── Animated Click Selection Target Marker for Satellites ──────────────────
 function SelectedSatelliteMarker({ position, color }: { position: THREE.Vector3; color: string }) {
   const waveRef = useRef<THREE.Mesh>(null!)
@@ -351,7 +354,7 @@ export function SatelliteUniverse() {
   // Selected satellite position & color calculation
   const selectedPosInfo = useMemo(() => {
     if (!selectedEntity || selectedEntity.type !== 'satellite' || !selectedEntity.data) return null
-    const data = selectedEntity.data
+    const data = selectedEntity.data as any
     if (data.lat == null || data.lng == null) return null
     const altKm = data.altitude_km ?? 400
     const r = GLOBE_RADIUS + scaleAltitude(altKm)

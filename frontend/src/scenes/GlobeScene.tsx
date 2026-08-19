@@ -152,12 +152,21 @@ function Starfield() {
 }
 
 // ── Focus Controller (Lerps camera to current rotated world position) ──────
-function FocusController({ globeGroupRef }: { globeGroupRef: React.RefObject<THREE.Group> }) {
+function FocusController({
+  globeGroupRef,
+  controlsRef,
+}: {
+  globeGroupRef: React.RefObject<THREE.Group>
+  controlsRef: React.RefObject<any>
+}) {
   const selectedEntity = useUniverseStore((s) => s.selectedEntity)
   const { camera } = useThree()
   const focusingRef = useRef(false)
+  const animStartRef = useRef(0)
+  const startCamPos = useRef(new THREE.Vector3())
   const targetCamPos = useRef(new THREE.Vector3(0, 0, 2.8))
 
+  // Trigger camera focus when selectedEntity changes
   useEffect(() => {
     if (
       selectedEntity?.data &&
@@ -169,18 +178,43 @@ function FocusController({ globeGroupRef }: { globeGroupRef: React.RefObject<THR
       const localVec = latLngToVec3(lat, lng, 1.0)
       const rotY = globeGroupRef.current.rotation.y
       const worldVec = localVec.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).normalize()
-      targetCamPos.current.copy(worldVec.multiplyScalar(2.2))
+      
+      startCamPos.current.copy(camera.position)
+      targetCamPos.current.copy(worldVec.multiplyScalar(2.3))
+      animStartRef.current = performance.now()
       focusingRef.current = true
     }
-  }, [selectedEntity, globeGroupRef])
+  }, [selectedEntity, globeGroupRef, camera])
 
-  useFrame((_, delta) => {
-    if (focusingRef.current) {
-      camera.position.lerp(targetCamPos.current, delta * 3.5)
-      camera.lookAt(0, 0, 0)
-      if (camera.position.distanceTo(targetCamPos.current) < 0.03) {
-        focusingRef.current = false
-      }
+  // Cancel focusing immediately if user starts interacting with controls!
+  useEffect(() => {
+    const controls = controlsRef.current
+    if (!controls) return
+    const handleStart = () => {
+      focusingRef.current = false
+    }
+    controls.addEventListener('start', handleStart)
+    return () => controls.removeEventListener('start', handleStart)
+  }, [controlsRef])
+
+  useFrame(() => {
+    if (!focusingRef.current) return
+    const elapsed = (performance.now() - animStartRef.current) / 1000
+    const duration = 0.75
+    const progress = Math.min(1, elapsed / duration)
+
+    // Smooth Sine Ease Out curve
+    const ease = Math.sin((progress * Math.PI) / 2)
+    camera.position.lerpVectors(startCamPos.current, targetCamPos.current, ease)
+    camera.lookAt(0, 0, 0)
+
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, 0, 0)
+      controlsRef.current.update()
+    }
+
+    if (progress >= 1.0) {
+      focusingRef.current = false
     }
   })
 
@@ -199,6 +233,7 @@ function GlobeMesh({
 }) {
   const mouseRef = useRef({ x: 0, y: 0 })
   const activeUniverse = useUniverseStore((s) => s.activeUniverse)
+  const selectedEntity = useUniverseStore((s) => s.selectedEntity)
 
   const prevUniverse = useRef(activeUniverse)
   const spinTargetRef = useRef(0)
@@ -245,8 +280,10 @@ function GlobeMesh({
           entryCompleteRef.current = true
         }
       } else {
-        // Resume normal slow idle rotation
-        groupRef.current.rotation.y += 0.004 * delta
+        // Pause slow idle rotation if an entity is selected so it doesn't spin away under camera!
+        if (!selectedEntity) {
+          groupRef.current.rotation.y += 0.003 * delta
+        }
       }
 
       // Universe switch rotation spin
@@ -257,8 +294,8 @@ function GlobeMesh({
       }
 
       // Parallax cursor tilt
-      const targetTiltX = mouseRef.current.y * 0.05
-      const targetTiltZ = -mouseRef.current.x * 0.05
+      const targetTiltX = mouseRef.current.y * 0.04
+      const targetTiltZ = -mouseRef.current.x * 0.04
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetTiltX, delta * 2.0)
       groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, targetTiltZ, delta * 2.0)
     }
@@ -285,6 +322,7 @@ export function GlobeScene({ children, interactive = true, dimmed = false }: Glo
   const [fadeIn, setFadeIn] = useState(false)
   const [dataPointsOpacity, setDataPointsOpacity] = useState(0)
   const globeGroupRef = useRef<THREE.Group>(null!)
+  const controlsRef = useRef<any>(null!)
 
   useEffect(() => {
     const t = setTimeout(() => setFadeIn(true), 50)
@@ -314,8 +352,8 @@ export function GlobeScene({ children, interactive = true, dimmed = false }: Glo
           height: '100%',
           background: '#000510',
         }}
-        gl={{ antialias: true, alpha: false }}
-        dpr={[1, 1.5]}
+        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+        dpr={[1, Math.min(window.devicePixelRatio, 2)]}
       >
         <ambientLight intensity={0.25} />
         <Starfield />
@@ -324,16 +362,17 @@ export function GlobeScene({ children, interactive = true, dimmed = false }: Glo
             {children}
           </group>
         </GlobeMesh>
-        <FocusController globeGroupRef={globeGroupRef} />
+        <FocusController globeGroupRef={globeGroupRef} controlsRef={controlsRef} />
         {interactive && (
           <OrbitControls
+            ref={controlsRef}
             enablePan={false}
-            minDistance={1.4}
+            minDistance={1.3}
             maxDistance={5.0}
             rotateSpeed={0.6}
             zoomSpeed={0.8}
             enableDamping
-            dampingFactor={0.05}
+            dampingFactor={0.07}
           />
         )}
       </Canvas>

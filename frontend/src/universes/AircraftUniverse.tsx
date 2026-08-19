@@ -138,7 +138,7 @@ export function AircraftUniverse() {
   // Selected aircraft position & color calculation
   const selectedPosInfo = useMemo(() => {
     if (!selectedEntity || selectedEntity.type !== 'aircraft' || !selectedEntity.data) return null
-    const data = selectedEntity.data
+    const data = selectedEntity.data as any
     if (data.lat == null || data.lng == null) return null
     const r = GLOBE_RADIUS + scaleAltitude(data.altitude)
     const pos = latLngToVec3(data.lat, data.lng, r)
