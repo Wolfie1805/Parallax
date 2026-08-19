@@ -33,63 +33,10 @@ function getWsUrl(): string {
 const RECONNECT_BASE_MS = 1000
 const RECONNECT_MAX_MS = 30000
 
-function generateFallbackSatellites() {
-  const sats = [
-    { norad_id: '25544', name: 'ISS (ZARYA)', lat: 41.5, lng: -74.0, altitude_km: 418.5 },
-    { norad_id: '20580', name: 'HST (HUBBLE)', lat: 28.5, lng: -80.6, altitude_km: 538.2 },
-    { norad_id: '48274', name: 'TIANGONG (CSS)', lat: 38.9, lng: 116.4, altitude_km: 389.1 },
-    { norad_id: '43013', name: 'NOAA 20', lat: 70.1, lng: -140.2, altitude_km: 824.0 },
-    { norad_id: '25994', name: 'TERRA', lat: -22.9, lng: -43.2, altitude_km: 705.0 },
-    { norad_id: '27424', name: 'AQUA', lat: 34.0, lng: -118.2, altitude_km: 705.0 },
-  ]
-  for (let i = 1; i <= 180; i++) {
-    const lat = Math.sin(i * 0.2) * 53.0
-    const lng = -180.0 + ((i * 2.0) % 360.0)
-    sats.push({
-      norad_id: `${44000 + i}`,
-      name: `STARLINK-${1000 + i}`,
-      lat: Math.round(lat * 100) / 100,
-      lng: Math.round(lng * 100) / 100,
-      altitude_km: 550.0 + (i % 4) * 5.0,
-    })
-  }
-  for (let i = 1; i <= 80; i++) {
-    const lat = Math.cos(i * 0.3) * 87.0
-    const lng = -180.0 + ((i * 4.5) % 360.0)
-    sats.push({
-      norad_id: `${45000 + i}`,
-      name: `ONEWEB-${2000 + i}`,
-      lat: Math.round(lat * 100) / 100,
-      lng: Math.round(lng * 100) / 100,
-      altitude_km: 1200.0 + (i % 3) * 10.0,
-    })
-  }
-  return sats
-}
+import initialTelemetry from '../data/initial_telemetry.json'
 
-function generateFallbackAircraft() {
-  const ac: any[] = []
-  for (let i = 1; i <= 150; i++) {
-    const lat = Math.sin(i * 0.25) * 55.0
-    const lng = -170.0 + ((i * 2.4) % 340.0)
-    const hdg = (i * 17.0) % 360.0
-    const alt = 8500.0 + (i % 8) * 400.0
-    ac.push({
-      icao24: `a${String(i).padStart(5, '0')}`,
-      callsign: `FLT${100 + i}`,
-      lat: Math.round(lat * 100) / 100,
-      lng: Math.round(lng * 100) / 100,
-      altitude: alt,
-      velocity: 220.0 + (i % 6) * 7.0,
-      heading: hdg,
-      origin_country: i % 3 === 0 ? 'United States' : i % 3 === 1 ? 'United Kingdom' : 'Germany',
-    })
-  }
-  return ac
-}
-
-const DEFAULT_FALLBACK_SATELLITES = generateFallbackSatellites()
-const DEFAULT_FALLBACK_AIRCRAFT = generateFallbackAircraft()
+const DEFAULT_FALLBACK_SATELLITES = initialTelemetry.satellites
+const DEFAULT_FALLBACK_AIRCRAFT = initialTelemetry.aircraft
 
 export function useWebSocket() {
   const setSatellites = useUniverseStore((s) => s.setSatellites)
