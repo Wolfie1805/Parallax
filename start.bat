@@ -1,0 +1,3 @@
+@echo off
+echo Starting PARALLAX Full-Stack Telemetry System...
+npm start
