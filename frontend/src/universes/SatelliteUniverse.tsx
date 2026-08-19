@@ -163,23 +163,88 @@ export function getSatelliteCategoryInfo(name: string = '', noradId?: string) {
   }
 }
 
-// ── Realistic 3D Satellite Geometry [==O==] (Core Bus + Dual Solar Wings + Dish) ─
+// ── Helper to merge buffer geometries into a single geometry ───────────────
+function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  let totalPositions = 0
+  let totalNormals = 0
+  let totalUvs = 0
+  let totalIndices = 0
+
+  for (const g of geometries) {
+    totalPositions += g.attributes.position.array.length
+    if (g.attributes.normal) totalNormals += g.attributes.normal.array.length
+    if (g.attributes.uv) totalUvs += g.attributes.uv.array.length
+    if (g.index) totalIndices += g.index.array.length
+  }
+
+  const mergedPos = new Float32Array(totalPositions)
+  const mergedNorm = new Float32Array(totalNormals)
+  const mergedUvs = new Float32Array(totalUvs)
+  const mergedIndices = totalIndices > 0 ? new Uint32Array(totalIndices) : null
+
+  let posOffset = 0
+  let normOffset = 0
+  let uvOffset = 0
+  let indexOffset = 0
+  let vertexOffset = 0
+
+  for (const g of geometries) {
+    const pos = g.attributes.position.array
+    mergedPos.set(pos, posOffset)
+    posOffset += pos.length
+
+    if (g.attributes.normal) {
+      const norm = g.attributes.normal.array
+      mergedNorm.set(norm, normOffset)
+      normOffset += norm.length
+    }
+
+    if (g.attributes.uv) {
+      const uv = g.attributes.uv.array
+      mergedUvs.set(uv, uvOffset)
+      uvOffset += uv.length
+    }
+
+    if (g.index && mergedIndices) {
+      const idx = g.index.array
+      for (let i = 0; i < idx.length; i++) {
+        mergedIndices[indexOffset + i] = idx[i] + vertexOffset
+      }
+      indexOffset += idx.length
+    }
+
+    vertexOffset += pos.length / 3
+  }
+
+  const merged = new THREE.BufferGeometry()
+  merged.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3))
+  if (totalNormals > 0) merged.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3))
+  if (totalUvs > 0) merged.setAttribute('uv', new THREE.BufferAttribute(mergedUvs, 2))
+  if (mergedIndices) merged.setIndex(new THREE.BufferAttribute(mergedIndices, 1))
+
+  return merged
+}
+
+// ── Realistic 3D Satellite Geometry [==O==] (Core Bus + Dual Solar Wings + Antenna) ─
 function createRefinedSatelliteGeometry(): THREE.BufferGeometry {
-  const groupGeo = new THREE.BufferGeometry()
+  // 1. Central Core Bus Body
+  const bus = new THREE.BoxGeometry(0.012, 0.012, 0.016)
 
-  // 1. Central Core Bus (Small Box)
-  const bus = new THREE.BoxGeometry(0.008, 0.008, 0.012)
-  
-  // 2. Solar Wings (Flat Panels)
-  const leftWing = new THREE.BoxGeometry(0.022, 0.002, 0.006)
-  leftWing.translate(-0.014, 0, 0)
+  // 2. Solar Panel Wings Left & Right
+  const leftWing = new THREE.BoxGeometry(0.026, 0.0018, 0.010)
+  leftWing.translate(-0.018, 0, 0)
 
-  const rightWing = new THREE.BoxGeometry(0.022, 0.002, 0.006)
-  rightWing.translate(0.014, 0, 0)
+  const rightWing = new THREE.BoxGeometry(0.026, 0.0018, 0.010)
+  rightWing.translate(0.018, 0, 0)
 
-  // Combine into single geometry
-  const geometries = [bus, leftWing, rightWing]
-  return bus
+  // 3. Wing Joint Mount Bar
+  const jointBar = new THREE.BoxGeometry(0.010, 0.003, 0.003)
+
+  // 4. Communication Antenna / Sensor Pod
+  const dish = new THREE.BoxGeometry(0.006, 0.008, 0.006)
+  dish.translate(0, 0.008, 0.004)
+
+  return mergeBufferGeometries([bus, leftWing, rightWing, jointBar, dish])
 }
 
 // Invisible Large Raycast Hitbox Geometry for Effortless Clicking
@@ -203,11 +268,13 @@ export function SatelliteUniverse() {
   const satellites = useUniverseStore((s) => s.satellites)
   const setSelectedEntity = useUniverseStore((s) => s.setSelectedEntity)
   const meshRef = useRef<THREE.InstancedMesh>(null!)
+  const glowMeshRef = useRef<THREE.InstancedMesh>(null!)
   const hitboxMeshRef = useRef<THREE.InstancedMesh>(null!)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
   const count = satellites.length
   const icoGeometry = useMemo(() => createRefinedSatelliteGeometry(), [])
+  const glowGeometry = useMemo(() => new THREE.SphereGeometry(0.022, 12, 12), [])
   const hitboxGeometry = useMemo(() => createHitboxGeometry(), [])
 
   const basePositions = useMemo(() => {
@@ -247,10 +314,19 @@ export function SatelliteUniverse() {
         basePos.z + swayOffset
       )
       DUMMY.rotation.set(time * 0.5, time * 0.3 + i, 0)
+      DUMMY.scale.set(1, 1, 1)
       DUMMY.updateMatrix()
 
       meshRef.current.setMatrixAt(i, DUMMY.matrix)
       if (hitboxMeshRef.current) hitboxMeshRef.current.setMatrixAt(i, DUMMY.matrix)
+
+      // Animate pulsing soft red glow halo
+      if (glowMeshRef.current) {
+        const pulseScale = 1.0 + Math.sin(time * 3.0 + i) * 0.2
+        DUMMY.scale.set(pulseScale, pulseScale, pulseScale)
+        DUMMY.updateMatrix()
+        glowMeshRef.current.setMatrixAt(i, DUMMY.matrix)
+      }
 
       const baseC = categoryColors[i] || COLOR_TMP.set('#ffffff')
       if (hoveredIdx === i) {
@@ -262,6 +338,7 @@ export function SatelliteUniverse() {
 
     meshRef.current.instanceMatrix.needsUpdate = true
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true
+    if (glowMeshRef.current) glowMeshRef.current.instanceMatrix.needsUpdate = true
     if (hitboxMeshRef.current) hitboxMeshRef.current.instanceMatrix.needsUpdate = true
   })
 
@@ -297,17 +374,31 @@ export function SatelliteUniverse() {
 
   return (
     <group>
-      {/* Refined Small 3D Satellite Model Mesh */}
+      {/* Refined 3D Satellite Model Mesh [==O==] */}
       <instancedMesh
         ref={meshRef}
         args={[icoGeometry, undefined, count]}
       >
         <meshStandardMaterial
           vertexColors
-          roughness={0.1}
-          metalness={0.9}
-          emissive="#00e5ff"
-          emissiveIntensity={2.8}
+          roughness={0.15}
+          metalness={0.85}
+          emissive="#ff1744"
+          emissiveIntensity={2.2}
+        />
+      </instancedMesh>
+
+      {/* Subtle Red Glowing Halo Spheres */}
+      <instancedMesh
+        ref={glowMeshRef}
+        args={[glowGeometry, undefined, count]}
+      >
+        <meshBasicMaterial
+          color="#ff2e43"
+          transparent
+          opacity={0.45}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
         />
       </instancedMesh>
 
@@ -327,18 +418,18 @@ export function SatelliteUniverse() {
         <Line
           key={idx}
           points={pts}
-          color="#00e5ff"
-          lineWidth={1.0}
+          color="#ff3355"
+          lineWidth={1.2}
           transparent
-          opacity={0.3}
+          opacity={0.35}
         />
       ))}
 
       {/* Hovered Ring Halo */}
       {hoveredPos && (
         <mesh position={hoveredPos}>
-          <sphereGeometry args={[0.032, 16, 16]} />
-          <meshBasicMaterial color={hoveredInfo?.color || '#00e5ff'} transparent opacity={0.85} wireframe />
+          <sphereGeometry args={[0.036, 16, 16]} />
+          <meshBasicMaterial color={hoveredInfo?.color || '#ff1744'} transparent opacity={0.9} wireframe />
         </mesh>
       )}
 
