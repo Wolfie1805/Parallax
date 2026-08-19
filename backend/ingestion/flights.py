@@ -171,6 +171,20 @@ def fetch_and_store_states() -> None:
         logger.warning("Aircraft fetch failed: %s", exc)
 
 
+FALLBACK_AIRCRAFT = [
+    {"icao24": "a00001", "callsign": "BAW117", "lat": 51.47, "lng": -0.45, "altitude": 10668.0, "velocity": 240.0, "heading": 270.0, "origin_country": "United Kingdom"},
+    {"icao24": "a00002", "callsign": "AAL100", "lat": 40.64, "lng": -73.78, "altitude": 9500.0, "velocity": 220.0, "heading": 90.0, "origin_country": "United States"},
+    {"icao24": "a00003", "callsign": "AFR006", "lat": 48.85, "lng": 2.35, "altitude": 11000.0, "velocity": 250.0, "heading": 180.0, "origin_country": "France"},
+    {"icao24": "a00004", "callsign": "DLH400", "lat": 50.03, "lng": 8.57, "altitude": 10500.0, "velocity": 235.0, "heading": 310.0, "origin_country": "Germany"},
+    {"icao24": "a00005", "callsign": "JAL005", "lat": 35.55, "lng": 139.78, "altitude": 12000.0, "velocity": 260.0, "heading": 45.0, "origin_country": "Japan"},
+    {"icao24": "a00006", "callsign": "QFA001", "lat": -33.86, "lng": 151.20, "altitude": 11500.0, "velocity": 245.0, "heading": 120.0, "origin_country": "Australia"},
+    {"icao24": "a00007", "callsign": "UAE201", "lat": 25.25, "lng": 55.36, "altitude": 10800.0, "velocity": 250.0, "heading": 300.0, "origin_country": "United Arab Emirates"},
+    {"icao24": "a00008", "callsign": "SIA022", "lat": 1.35, "lng": 103.98, "altitude": 11200.0, "velocity": 255.0, "heading": 15.0, "origin_country": "Singapore"},
+    {"icao24": "a00009", "callsign": "AIC101", "lat": 28.55, "lng": 77.10, "altitude": 10000.0, "velocity": 230.0, "heading": 220.0, "origin_country": "India"},
+    {"icao24": "a00010", "callsign": "LAT800", "lat": -33.39, "lng": -70.79, "altitude": 9800.0, "velocity": 225.0, "heading": 190.0, "origin_country": "Chile"},
+]
+
+
 def get_cached_aircraft(limit: int = 500) -> list[dict]:
     """Read the latest aircraft snapshot from the database for broadcasting."""
     db: Session = SessionLocal()
@@ -181,6 +195,23 @@ def get_cached_aircraft(limit: int = 500) -> list[dict]:
             .limit(limit)
             .all()
         )
+        if not aircraft:
+            logger.info("No aircraft in DB on get_cached_aircraft call; running fetch_and_store_states()...")
+            try:
+                fetch_and_store_states()
+                aircraft = (
+                    db.query(Aircraft)
+                    .filter(Aircraft.lat.isnot(None), Aircraft.lng.isnot(None))
+                    .limit(limit)
+                    .all()
+                )
+            except Exception as exc:
+                logger.warning("Failed to auto-fetch aircraft: %s", exc)
+
+        if not aircraft:
+            logger.info("Using fallback aircraft states...")
+            return FALLBACK_AIRCRAFT
+
         return [
             {
                 "icao24": a.icao24,

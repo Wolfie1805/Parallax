@@ -10,21 +10,15 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models.events import Satellite
 
+from backend.ingestion.satellites import propagate_all, fetch_and_store_tles
+
 router = APIRouter(prefix="/api/satellites", tags=["satellites"])
 
 
 @router.get("/")
 def list_satellites(db: Session = Depends(get_db)):
-    """Return all stored satellite TLE records."""
-    sats = db.query(Satellite).all()
-    return [
-        {
-            "norad_id": s.norad_id,
-            "name": s.name,
-            "fetched_at": s.fetched_at.isoformat(),
-        }
-        for s in sats
-    ]
+    """Return all stored satellite records with computed lat/lng/altitude."""
+    return propagate_all(db)
 
 
 @router.get("/{norad_id}")
