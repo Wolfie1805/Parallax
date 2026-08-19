@@ -145,22 +145,8 @@ export function AircraftUniverse() {
 
       DUMMY.position.set(basePos.x + bob, basePos.y + bob, basePos.z + bob)
       
-      // Orient airplane flat to the globe surface pointing in flight heading direction
-      const up = basePos.clone().normalize()
-      const hdgRad = ((ac.heading ?? 0) * Math.PI) / 180
-      const north = new THREE.Vector3(0, 1, 0).projectOnPlane(up).normalize()
-      const east = new THREE.Vector3().crossVectors(up, north).normalize()
-      const headingDir = new THREE.Vector3()
-        .addScaledVector(north, Math.cos(hdgRad))
-        .addScaledVector(east, Math.sin(hdgRad))
-        .normalize()
-
-      const rotMatrix = new THREE.Matrix4().makeBasis(
-        new THREE.Vector3().crossVectors(up, headingDir).normalize(),
-        headingDir,
-        up
-      )
-      DUMMY.quaternion.setFromRotationMatrix(rotMatrix)
+      // Face camera billboard orientation for 3D perspective aircraft icon
+      DUMMY.quaternion.copy(camera.quaternion)
 
       // Hover scale pulse animation
       const isHovered = hoveredIdx === i
