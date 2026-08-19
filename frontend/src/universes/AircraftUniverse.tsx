@@ -54,8 +54,60 @@ function buildFlightTrail(lat: number, lng: number, heading: number | null, radi
 const DUMMY = new THREE.Object3D()
 const COLOR_TMP = new THREE.Color()
 
+// ── Animated Click Selection Target Marker for Aircraft ────────────────────
+function SelectedAircraftMarker({ position, color }: { position: THREE.Vector3; color: string }) {
+  const waveRef = useRef<THREE.Mesh>(null!)
+  const reticleRef = useRef<THREE.Mesh>(null!)
+
+  const quat = useMemo(() => {
+    return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), position.clone().normalize())
+  }, [position])
+
+  const groundPos = useMemo(() => position.clone().normalize().multiplyScalar(GLOBE_RADIUS), [position])
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    if (waveRef.current) {
+      const progress = (t * 2.0) % 1.0
+      const scale = 1.0 + progress * 1.6
+      const opacity = (1.0 - progress) * 0.9
+      waveRef.current.scale.set(scale, scale, scale)
+      ;(waveRef.current.material as THREE.MeshBasicMaterial).opacity = opacity
+    }
+    if (reticleRef.current) {
+      reticleRef.current.rotation.z = -t * 2.2
+    }
+  })
+
+  return (
+    <group position={position}>
+      {/* 1. Animated Radar Pulse Wave */}
+      <mesh ref={waveRef} quaternion={quat}>
+        <ringGeometry args={[0.02, 0.036, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.85} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* 2. Rotating Tactical Reticle Ring */}
+      <mesh ref={reticleRef} quaternion={quat}>
+        <torusGeometry args={[0.034, 0.002, 8, 24]} />
+        <meshBasicMaterial color={color} transparent opacity={0.9} />
+      </mesh>
+
+      {/* 3. Altitude Height Line to Surface */}
+      <Line
+        points={[new THREE.Vector3(0, 0, 0), groundPos.clone().sub(position)]}
+        color={color}
+        lineWidth={1.5}
+        transparent
+        opacity={0.6}
+      />
+    </group>
+  )
+}
+
 export function AircraftUniverse() {
   const aircraft = useUniverseStore((s) => s.aircraft)
+  const selectedEntity = useUniverseStore((s) => s.selectedEntity)
   const setSelectedEntity = useUniverseStore((s) => s.setSelectedEntity)
   const meshRef = useRef<THREE.InstancedMesh>(null!)
   const hitboxMeshRef = useRef<THREE.InstancedMesh>(null!)
@@ -82,6 +134,17 @@ export function AircraftUniverse() {
       return buildFlightTrail(ac.lat, ac.lng, ac.heading, r)
     })
   }, [aircraft])
+
+  // Selected aircraft position & color calculation
+  const selectedPosInfo = useMemo(() => {
+    if (!selectedEntity || selectedEntity.type !== 'aircraft' || !selectedEntity.data) return null
+    const data = selectedEntity.data
+    if (data.lat == null || data.lng == null) return null
+    const r = GLOBE_RADIUS + scaleAltitude(data.altitude)
+    const pos = latLngToVec3(data.lat, data.lng, r)
+    const color = '#00b0ff'
+    return { pos, color }
+  }, [selectedEntity])
 
   useFrame(({ clock }) => {
     if (!meshRef.current || count === 0) return
@@ -181,8 +244,13 @@ export function AircraftUniverse() {
         />
       ))}
 
+      {/* Clicked / Selected Aircraft Animation Marker */}
+      {selectedPosInfo && (
+        <SelectedAircraftMarker position={selectedPosInfo.pos} color={selectedPosInfo.color} />
+      )}
+
       {/* Hover Ring Halo */}
-      {hoveredPos && (
+      {hoveredPos && !selectedPosInfo && (
         <mesh position={hoveredPos}>
           <sphereGeometry args={[0.032, 16, 16]} />
           <meshBasicMaterial color="#00b0ff" transparent opacity={0.85} wireframe />

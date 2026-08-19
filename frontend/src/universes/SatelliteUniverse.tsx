@@ -261,20 +261,68 @@ function buildSatelliteShortTrail(lat: number, lng: number, radius = 1.15): THRE
   return points
 }
 
-const DUMMY = new THREE.Object3D()
-const COLOR_TMP = new THREE.Color()
+// ── Animated Click Selection Target Marker for Satellites ──────────────────
+function SelectedSatelliteMarker({ position, color }: { position: THREE.Vector3; color: string }) {
+  const waveRef = useRef<THREE.Mesh>(null!)
+  const reticleRef = useRef<THREE.Mesh>(null!)
+
+  const quat = useMemo(() => {
+    return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), position.clone().normalize())
+  }, [position])
+
+  const groundPos = useMemo(() => position.clone().normalize().multiplyScalar(GLOBE_RADIUS), [position])
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    if (waveRef.current) {
+      const progress = (t * 1.8) % 1.0
+      const scale = 1.0 + progress * 1.8
+      const opacity = (1.0 - progress) * 0.95
+      waveRef.current.scale.set(scale, scale, scale)
+      ;(waveRef.current.material as THREE.MeshBasicMaterial).opacity = opacity
+    }
+    if (reticleRef.current) {
+      reticleRef.current.rotation.z = t * 1.6
+      reticleRef.current.rotation.y = t * 0.9
+    }
+  })
+
+  return (
+    <group position={position}>
+      {/* 1. Animated Radial Pulse Wave */}
+      <mesh ref={waveRef} quaternion={quat}>
+        <ringGeometry args={[0.02, 0.038, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.85} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* 2. Rotating Holographic Target Octahedron */}
+      <mesh ref={reticleRef}>
+        <octahedronGeometry args={[0.042, 0]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={0.95} />
+      </mesh>
+
+      {/* 3. Orbit-to-Ground Laser Altitude Guide */}
+      <Line
+        points={[new THREE.Vector3(0, 0, 0), groundPos.clone().sub(position)]}
+        color={color}
+        lineWidth={1.5}
+        transparent
+        opacity={0.5}
+      />
+    </group>
+  )
+}
 
 export function SatelliteUniverse() {
   const satellites = useUniverseStore((s) => s.satellites)
+  const selectedEntity = useUniverseStore((s) => s.selectedEntity)
   const setSelectedEntity = useUniverseStore((s) => s.setSelectedEntity)
   const meshRef = useRef<THREE.InstancedMesh>(null!)
-  const glowMeshRef = useRef<THREE.InstancedMesh>(null!)
   const hitboxMeshRef = useRef<THREE.InstancedMesh>(null!)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
   const count = satellites.length
   const icoGeometry = useMemo(() => createRefinedSatelliteGeometry(), [])
-  const glowGeometry = useMemo(() => new THREE.SphereGeometry(0.022, 12, 12), [])
   const hitboxGeometry = useMemo(() => createHitboxGeometry(), [])
 
   const basePositions = useMemo(() => {
@@ -300,6 +348,18 @@ export function SatelliteUniverse() {
     })
   }, [satellites])
 
+  // Selected satellite position & color calculation
+  const selectedPosInfo = useMemo(() => {
+    if (!selectedEntity || selectedEntity.type !== 'satellite' || !selectedEntity.data) return null
+    const data = selectedEntity.data
+    if (data.lat == null || data.lng == null) return null
+    const altKm = data.altitude_km ?? 400
+    const r = GLOBE_RADIUS + scaleAltitude(altKm)
+    const pos = latLngToVec3(data.lat, data.lng, r)
+    const info = getSatelliteCategoryInfo(data.name)
+    return { pos, color: info.color }
+  }, [selectedEntity])
+
   useFrame(({ clock }) => {
     if (!meshRef.current || count === 0) return
     const time = clock.getElapsedTime()
@@ -320,14 +380,6 @@ export function SatelliteUniverse() {
       meshRef.current.setMatrixAt(i, DUMMY.matrix)
       if (hitboxMeshRef.current) hitboxMeshRef.current.setMatrixAt(i, DUMMY.matrix)
 
-      // Animate pulsing soft red glow halo
-      if (glowMeshRef.current) {
-        const pulseScale = 1.0 + Math.sin(time * 3.0 + i) * 0.2
-        DUMMY.scale.set(pulseScale, pulseScale, pulseScale)
-        DUMMY.updateMatrix()
-        glowMeshRef.current.setMatrixAt(i, DUMMY.matrix)
-      }
-
       const baseC = categoryColors[i] || COLOR_TMP.set('#ffffff')
       if (hoveredIdx === i) {
         meshRef.current.setColorAt(i, COLOR_TMP.set('#ffffff'))
@@ -338,7 +390,6 @@ export function SatelliteUniverse() {
 
     meshRef.current.instanceMatrix.needsUpdate = true
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true
-    if (glowMeshRef.current) glowMeshRef.current.instanceMatrix.needsUpdate = true
     if (hitboxMeshRef.current) hitboxMeshRef.current.instanceMatrix.needsUpdate = true
   })
 
@@ -381,24 +432,10 @@ export function SatelliteUniverse() {
       >
         <meshStandardMaterial
           vertexColors
-          roughness={0.15}
-          metalness={0.85}
-          emissive="#ff1744"
-          emissiveIntensity={2.2}
-        />
-      </instancedMesh>
-
-      {/* Subtle Red Glowing Halo Spheres */}
-      <instancedMesh
-        ref={glowMeshRef}
-        args={[glowGeometry, undefined, count]}
-      >
-        <meshBasicMaterial
-          color="#ff2e43"
-          transparent
-          opacity={0.45}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
+          roughness={0.1}
+          metalness={0.9}
+          emissive="#00e5ff"
+          emissiveIntensity={2.5}
         />
       </instancedMesh>
 
@@ -418,18 +455,23 @@ export function SatelliteUniverse() {
         <Line
           key={idx}
           points={pts}
-          color="#ff3355"
-          lineWidth={1.2}
+          color="#00e5ff"
+          lineWidth={1.0}
           transparent
-          opacity={0.35}
+          opacity={0.3}
         />
       ))}
 
+      {/* Clicked / Selected Satellite Animation Marker */}
+      {selectedPosInfo && (
+        <SelectedSatelliteMarker position={selectedPosInfo.pos} color={selectedPosInfo.color} />
+      )}
+
       {/* Hovered Ring Halo */}
-      {hoveredPos && (
+      {hoveredPos && !selectedPosInfo && (
         <mesh position={hoveredPos}>
           <sphereGeometry args={[0.036, 16, 16]} />
-          <meshBasicMaterial color={hoveredInfo?.color || '#ff1744'} transparent opacity={0.9} wireframe />
+          <meshBasicMaterial color={hoveredInfo?.color || '#00e5ff'} transparent opacity={0.85} wireframe />
         </mesh>
       )}
 
