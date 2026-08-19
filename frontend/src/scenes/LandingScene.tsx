@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import earthData from '../geo/earthParticlesData.json'
 
 // ── Typewriter Hook ──────────────────────────────────────────────────────────
-function useTypewriter(fullText: string, speedMs = 30, delayMs = 0) {
+function useTypewriter(fullText: string, speedMs = 35, delayMs = 0) {
   const [revealedCount, setRevealedCount] = useState(0)
   const [isStarted, setIsStarted] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
@@ -203,7 +203,6 @@ function LandingGlobeScene({ dissolving, onComplete }: { dissolving: boolean; on
       return
     }
 
-    // High-Speed Warp Spin under 1.0s total (0.75s)
     timeRef.current += delta
     const elapsed = timeRef.current
     const totalDuration = 0.75
@@ -310,6 +309,86 @@ function PedestalGlow() {
   )
 }
 
+// ── Developer Profile Card (Matching User Design) ───────────────────────────
+function DeveloperCard() {
+  const nameTypewriter = useTypewriter('Aryanuj Chaudhary', 45, 600)
+
+  return (
+    <div
+      style={{
+        marginTop: 28,
+        paddingTop: 20,
+        borderTop: '1px solid rgba(124, 77, 255, 0.22)',
+        animation: 'fadeInBlur 0.8s 0.8s backwards',
+      }}
+    >
+      {/* Telemetry Header Row */}
+      <div style={{ display: 'flex', gap: 36, marginBottom: 18, fontFamily: '"JetBrains Mono", monospace' }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 3 }}>NODES</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#ffffff', letterSpacing: '0.04em' }}>39,747</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 3 }}>GRAPH</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#a6c8ff', letterSpacing: '0.04em' }}>ready</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 3 }}>LAYOUT</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#a6c8ff', letterSpacing: '0.04em' }}>synthetic v2</div>
+        </div>
+      </div>
+
+      {/* Profile Card Row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        {/* Animated Avatar Image Frame */}
+        <div className="avatar-wrapper">
+          <img
+            src="/assets/aryanuj.jpg"
+            alt="Aryanuj Chaudhary"
+            className="avatar-img"
+          />
+        </div>
+
+        {/* Name & Social Links */}
+        <div>
+          <div className="dev-name">
+            {nameTypewriter.displayedText}
+            <span className="blink-cursor">|</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+            {/* GitHub Profile Button */}
+            <a
+              href="https://github.com/Wolfie1805"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="dev-social-btn github-btn"
+              title="GitHub Profile"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
+            </a>
+
+            {/* LinkedIn Profile Button */}
+            <a
+              href="https://www.linkedin.com/in/aryanuj-chaudhary"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="dev-social-btn linkedin-btn"
+              title="LinkedIn Profile"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main LandingScene Component ──────────────────────────────────────────────
 interface LandingSceneProps {
   onStart: () => void
@@ -331,7 +410,6 @@ export function LandingScene({ onStart }: LandingSceneProps) {
   const weatherCount = useCountUp(54783, 1000, 400)
   const latency = useCountUp(42, 600, 200)
 
-  // High-Impact <1s Start Visualizer sequence
   const triggerIgnition = useCallback(() => {
     if (dissolving) return
     setFadeOverlay(true)
@@ -344,7 +422,7 @@ export function LandingScene({ onStart }: LandingSceneProps) {
     setFadingOut(true)
     setTimeout(() => {
       onStart()
-    }, 300) // Fast 0.3s resolution
+    }, 300)
   }, [onStart])
 
   return (
@@ -368,7 +446,7 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           0%,100% { opacity: 1; } 50% { opacity: 0; }
         }
         .blink-cursor {
-          display: inline-block; margin-left: 2px; color: #00e5ff;
+          display: inline-block; margin-left: 3px; color: #a6c8ff;
           animation: blinkCursor 1s step-end infinite;
         }
         @keyframes pedestalPulse {
@@ -400,21 +478,68 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           background: rgba(0,229,255,0.12);
           box-shadow: 0 0 36px rgba(0,229,255,0.5);
         }
-        .social-square {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 10px 18px; border-radius: 10px;
-          border: 1px solid rgba(0, 229, 255, 0.3);
-          background: rgba(8, 14, 28, 0.75);
-          color: #ffffff;
-          font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600;
-          text-decoration: none; transition: all 0.25s ease;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-          backdrop-filter: blur(12px);
+
+        /* ── Developer Card Styles matching Reference Image ── */
+        .avatar-wrapper {
+          position: relative;
+          width: 82px;
+          height: 82px;
+          border-radius: 50%;
+          padding: 3px;
+          background: linear-gradient(135deg, #7c4dff, #00e5ff, #3d5afe);
+          box-shadow: 0 0 24px rgba(124, 77, 255, 0.45), 0 0 44px rgba(0, 229, 255, 0.2);
+          animation: avatarFloat 4s ease-in-out infinite;
+          flex-shrink: 0;
         }
-        .social-square:hover {
-          border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.15);
-          box-shadow: 0 0 24px rgba(0,229,255,0.4);
-          transform: translateY(-2px);
+        @keyframes avatarFloat {
+          0%, 100% { transform: translateY(0); box-shadow: 0 0 24px rgba(124, 77, 255, 0.45); }
+          50%      { transform: translateY(-5px); box-shadow: 0 0 36px rgba(0, 229, 255, 0.6); }
+        }
+        .avatar-img {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          display: block;
+        }
+        .dev-name {
+          font-family: "JetBrains Mono", monospace;
+          font-size: 20px;
+          font-weight: 700;
+          color: #a6c8ff;
+          text-shadow: 0 0 14px rgba(166, 200, 255, 0.6);
+          letter-spacing: 0.02em;
+        }
+        .dev-social-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          color: #ffffff;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+          text-decoration: none;
+        }
+        .github-btn {
+          background: #4f37a5;
+          border-radius: 50%;
+          box-shadow: 0 0 16px rgba(79, 55, 165, 0.5);
+        }
+        .github-btn:hover {
+          background: #6a44eb;
+          transform: scale(1.12) translateY(-2px);
+          box-shadow: 0 0 26px rgba(106, 68, 235, 0.85);
+        }
+        .linkedin-btn {
+          background: #2b56b3;
+          border-radius: 12px;
+          box-shadow: 0 0 16px rgba(43, 86, 179, 0.5);
+        }
+        .linkedin-btn:hover {
+          background: #3b6ef6;
+          transform: scale(1.12) translateY(-2px);
+          box-shadow: 0 0 26px rgba(59, 110, 246, 0.85);
         }
       `}</style>
 
@@ -504,11 +629,11 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           style={{
             fontFamily: '"Syne", "Inter", sans-serif',
             fontWeight: 700,
-            fontSize: 'clamp(28px, 6vw, 56px)',
+            fontSize: 'clamp(26px, 5.5vw, 52px)',
             lineHeight: 1.08,
             letterSpacing: '-0.02em',
             color: '#fff',
-            margin: '0 0 18px 0',
+            margin: '0 0 16px 0',
           }}
         >
           {['Every', ' ', 'operational', ' ', 'sphere', ' ', 'has', ' '].map((word, wi) =>
@@ -545,10 +670,10 @@ export function LandingScene({ onStart }: LandingSceneProps) {
 
         <p
           style={{
-            fontSize: 'clamp(12px, 2.2vw, 14px)',
-            lineHeight: 1.6,
+            fontSize: 'clamp(12px, 2.1vw, 13.5px)',
+            lineHeight: 1.55,
             color: 'rgba(255,255,255,0.6)',
-            margin: '0 0 28px 0',
+            margin: '0 0 24px 0',
             fontFamily: '"JetBrains Mono", monospace',
             maxWidth: 480,
             animation: 'fadeInBlur 0.8s 0.4s backwards',
@@ -565,14 +690,8 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 24, flexWrap: 'wrap', animation: 'fadeInBlur 0.8s 0.9s backwards' }}>
-          <a href="https://github.com/Wolfie1805" target="_blank" rel="noopener noreferrer" className="social-square">
-            <span>🐙</span> GitHub
-          </a>
-          <a href="https://www.linkedin.com/in/aryanuj-chaudhary" target="_blank" rel="noopener noreferrer" className="social-square">
-            <span>💼</span> LinkedIn
-          </a>
-        </div>
+        {/* Developer Card (Matching User Uploaded Design) */}
+        <DeveloperCard />
       </div>
 
       {/* Bottom Stats Bar */}
