@@ -1,7 +1,7 @@
 import { useRef, useMemo, useCallback, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { Line, Html } from '@react-three/drei'
+import { Line, Html, useTexture } from '@react-three/drei'
 import { useUniverseStore } from '../state/universeStore'
 import { latLngToVec3, GLOBE_RADIUS } from '../scenes/GlobeScene'
 
@@ -17,26 +17,13 @@ function getAltitudeColor(altMeters: number | null): THREE.Color {
   return new THREE.Color('#ffd740')                  // Gold low altitude
 }
 
-// ── Refined Sleek 3D Aircraft Chevron Geometry (Small Visual Size) ────────────
-function createRefinedAircraftGeometry(): THREE.BufferGeometry {
-  const shape = new THREE.Shape()
-  shape.moveTo(0, 0.012)        // Nose tip
-  shape.lineTo(0.007, -0.008)   // Right wingtip
-  shape.lineTo(0.002, -0.005)   // Right body notch
-  shape.lineTo(0, -0.010)       // Tail center
-  shape.lineTo(-0.002, -0.005)  // Left body notch
-  shape.lineTo(-0.007, -0.008)  // Left wingtip
-  shape.closePath()
-
-  const extrudeSettings = { depth: 0.003, bevelEnabled: false }
-  const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings)
-  geom.rotateX(Math.PI / 2) // Orient flat to flight direction
+function createPlaneBillboardGeometry(): THREE.BufferGeometry {
+  const geom = new THREE.PlaneGeometry(0.040, 0.040)
   return geom
 }
 
-// Invisible Large Raycast Hitbox Geometry for Effortless Clicking
 function createHitboxGeometry(): THREE.BufferGeometry {
-  return new THREE.SphereGeometry(0.032, 8, 8)
+  return new THREE.SphereGeometry(0.035, 8, 8)
 }
 
 function buildFlightTrail(lat: number, lng: number, heading: number | null, radius: number): THREE.Vector3[] {
@@ -54,7 +41,7 @@ function buildFlightTrail(lat: number, lng: number, heading: number | null, radi
 const DUMMY = new THREE.Object3D()
 const COLOR_TMP = new THREE.Color()
 
-// ── Animated Click Selection Target Marker for Aircraft ────────────────────
+// ── Animated Target Marker for Selected Aircraft ───────────────────────────
 function SelectedAircraftMarker({ position, color }: { position: THREE.Vector3; color: string }) {
   const waveRef = useRef<THREE.Mesh>(null!)
   const reticleRef = useRef<THREE.Mesh>(null!)
@@ -81,19 +68,19 @@ function SelectedAircraftMarker({ position, color }: { position: THREE.Vector3; 
 
   return (
     <group position={position}>
-      {/* 1. Animated Radar Pulse Wave */}
+      {/* 1. Radar Pulse Wave */}
       <mesh ref={waveRef} quaternion={quat}>
         <ringGeometry args={[0.02, 0.036, 32]} />
         <meshBasicMaterial color={color} transparent opacity={0.85} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* 2. Rotating Tactical Reticle Ring */}
+      {/* 2. Tactical Reticle Ring */}
       <mesh ref={reticleRef} quaternion={quat}>
         <torusGeometry args={[0.034, 0.002, 8, 24]} />
         <meshBasicMaterial color={color} transparent opacity={0.9} />
       </mesh>
 
-      {/* 3. Altitude Height Line to Surface */}
+      {/* 3. Altitude Drop Line to Surface */}
       <Line
         points={[new THREE.Vector3(0, 0, 0), groundPos.clone().sub(position)]}
         color={color}
@@ -113,8 +100,11 @@ export function AircraftUniverse() {
   const hitboxMeshRef = useRef<THREE.InstancedMesh>(null!)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
+  const planeTexture = useTexture('/textures/airplane_icon.png')
+  planeTexture.colorSpace = THREE.SRGBColorSpace
+
   const count = aircraft.length
-  const aircraftGeom = useMemo(() => createRefinedAircraftGeometry(), [])
+  const quadGeometry = useMemo(() => createPlaneBillboardGeometry(), [])
   const hitboxGeometry = useMemo(() => createHitboxGeometry(), [])
 
   const basePositions = useMemo(() => {
@@ -135,7 +125,6 @@ export function AircraftUniverse() {
     })
   }, [aircraft])
 
-  // Selected aircraft position & color calculation
   const selectedPosInfo = useMemo(() => {
     if (!selectedEntity || selectedEntity.type !== 'aircraft' || !selectedEntity.data) return null
     const data = selectedEntity.data as any
@@ -146,25 +135,30 @@ export function AircraftUniverse() {
     return { pos, color }
   }, [selectedEntity])
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     if (!meshRef.current || count === 0) return
     const time = clock.getElapsedTime()
 
     aircraft.forEach((ac, i) => {
       const basePos = basePositions[i]
-      const hdgRad = ((ac.heading ?? 0) * Math.PI) / 180
+      const bob = Math.sin(time * 2.0 + i) * 0.001
 
-      // Micro-bobbing & heading roll
-      const bob = Math.sin(time * 2.5 + i) * 0.001
       DUMMY.position.set(basePos.x + bob, basePos.y + bob, basePos.z + bob)
-      DUMMY.rotation.set(0, -hdgRad, 0)
+      
+      // Face camera billboard orientation
+      DUMMY.quaternion.copy(camera.quaternion)
+
+      // Hover scale pulse animation
+      const isHovered = hoveredIdx === i
+      const scale = isHovered ? 1.5 : 1.0
+      DUMMY.scale.set(scale, scale, scale)
       DUMMY.updateMatrix()
 
       meshRef.current.setMatrixAt(i, DUMMY.matrix)
       if (hitboxMeshRef.current) hitboxMeshRef.current.setMatrixAt(i, DUMMY.matrix)
 
       const baseC = altColors[i] || COLOR_TMP.set('#00b0ff')
-      if (hoveredIdx === i) {
+      if (isHovered) {
         meshRef.current.setColorAt(i, COLOR_TMP.set('#ffffff'))
       } else {
         meshRef.current.setColorAt(i, baseC)
@@ -207,21 +201,21 @@ export function AircraftUniverse() {
 
   return (
     <group>
-      {/* Refined Small 3D Aircraft Chevron Mesh */}
+      {/* Uploaded Custom Airplane Icon Billboard Instanced Mesh */}
       <instancedMesh
         ref={meshRef}
-        args={[aircraftGeom, undefined, count]}
+        args={[quadGeometry, undefined, count]}
       >
-        <meshStandardMaterial
-          vertexColors
-          roughness={0.15}
-          metalness={0.85}
-          emissive="#00b0ff"
-          emissiveIntensity={2.8}
+        <meshBasicMaterial
+          map={planeTexture}
+          transparent
+          alphaTest={0.02}
+          side={THREE.DoubleSide}
+          toneMapped={false}
         />
       </instancedMesh>
 
-      {/* Large Invisible Hitbox Mesh for Effortless Clicking */}
+      {/* Invisible Hitboxes for Raycasting */}
       <instancedMesh
         ref={hitboxMeshRef}
         args={[hitboxGeometry, undefined, count]}
@@ -232,7 +226,7 @@ export function AircraftUniverse() {
         <meshBasicMaterial visible={false} />
       </instancedMesh>
 
-      {/* Altitude-Colored Directional Flight Trails */}
+      {/* Altitude Flight Path Trails */}
       {flightTrails.map((pts, idx) => (
         <Line
           key={idx}
@@ -244,20 +238,20 @@ export function AircraftUniverse() {
         />
       ))}
 
-      {/* Clicked / Selected Aircraft Animation Marker */}
+      {/* Selection Marker */}
       {selectedPosInfo && (
         <SelectedAircraftMarker position={selectedPosInfo.pos} color={selectedPosInfo.color} />
       )}
 
-      {/* Hover Ring Halo */}
+      {/* Hover Halo */}
       {hoveredPos && !selectedPosInfo && (
         <mesh position={hoveredPos}>
-          <sphereGeometry args={[0.032, 16, 16]} />
+          <sphereGeometry args={[0.035, 16, 16]} />
           <meshBasicMaterial color="#00b0ff" transparent opacity={0.85} wireframe />
         </mesh>
       )}
 
-      {/* Hover Tooltip Tag */}
+      {/* Hover Info Tooltip */}
       {hoveredAc && hoveredPos && (
         <Html position={hoveredPos} center style={{ pointerEvents: 'none' }}>
           <div
@@ -265,7 +259,7 @@ export function AircraftUniverse() {
               background: 'rgba(3, 12, 24, 0.95)',
               border: '1px solid #00b0ff',
               borderRadius: 6,
-              padding: '5px 10px',
+              padding: '6px 12px',
               fontSize: 11,
               fontFamily: '"JetBrains Mono", monospace',
               color: '#ffffff',
