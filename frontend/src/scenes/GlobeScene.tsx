@@ -358,7 +358,7 @@ export function GlobeScene({ children, interactive = true, dimmed = false }: Glo
         <ambientLight intensity={0.25} />
         <Starfield />
         <GlobeMesh groupRef={globeGroupRef} onSpinProgress={handleSpinProgress}>
-          <group visible={dataPointsOpacity > 0.05}>
+          <group visible={true}>
             {children}
           </group>
         </GlobeMesh>
