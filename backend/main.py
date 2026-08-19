@@ -6,9 +6,16 @@ FastAPI application entry point.
 - All routers mounted under /api or /ws
 - APScheduler started in lifespan (startup) and stopped on shutdown
 - Broadcast loop started as a background asyncio task
+
+Vercel serverless note:
+  On Vercel each function invocation is a separate process. The scheduler and
+  WebSocket broadcast loop start on cold-start and run within that process's
+  lifetime. SQLite data written in /tmp persists within a warm instance.
+  For full persistence and real-time push, use PostgreSQL + a dedicated server.
 """
 
 import sys
+import os
 from pathlib import Path
 
 # Ensure project root is in sys.path
@@ -37,19 +44,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Track whether lifespan has already run (guards against duplicate startup
+# within the same process on Vercel warm-instance reuse).
+_started = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _started
     # ── Startup ──────────────────────────────────────────────────────────────
-    logger.info("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
+    if not _started:
+        _started = True
 
-    logger.info("Running initial TLE fetch...")
-    fetch_and_store_tles()  # Populate satellite data immediately on startup
+        logger.info("Creating database tables...")
+        Base.metadata.create_all(bind=engine)
 
-    logger.info("Starting scheduler...")
-    setup_jobs()
-    scheduler.start()
+        logger.info("Running initial TLE fetch...")
+        try:
+            fetch_and_store_tles()  # Populate satellite data immediately on startup
+        except Exception as exc:
+            logger.warning("Initial TLE fetch failed: %s — continuing.", exc)
+
+        logger.info("Starting scheduler...")
+        setup_jobs()
+        try:
+            scheduler.start()
+        except Exception as exc:
+            logger.warning("Scheduler start warning: %s", exc)
 
     logger.info("Starting WebSocket broadcast loop...")
     broadcast_task = asyncio.create_task(_broadcast_loop())
@@ -63,7 +84,10 @@ async def lifespan(app: FastAPI):
         await broadcast_task
     except asyncio.CancelledError:
         pass
-    scheduler.shutdown(wait=False)
+    try:
+        scheduler.shutdown(wait=False)
+    except Exception:
+        pass
 
 
 app = FastAPI(

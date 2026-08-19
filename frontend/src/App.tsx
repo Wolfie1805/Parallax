@@ -126,12 +126,14 @@ function GlobeApp() {
   useWebSocket()
 
   // Fetch city list once on mount
+  // VITE_API_BASE_URL is set in Vercel for split deployments; empty = relative path (dev)
+  const apiBase = import.meta.env.VITE_API_BASE_URL ?? ''
   useEffect(() => {
-    fetch('/api/weather/cities')
+    fetch(`${apiBase}/api/weather/cities`)
       .then((r) => r.json())
       .then(setCities)
       .catch(console.error)
-  }, [setCities])
+  }, [setCities, apiBase])
 
   return (
     <>

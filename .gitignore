@@ -2,6 +2,7 @@ node_modules/
 venv/
 __pycache__/
 .env
+!.env.example
 *.pyc
 .DS_Store
 dist/
