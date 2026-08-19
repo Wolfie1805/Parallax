@@ -198,7 +198,7 @@ function LandingGlobeScene({ dissolving, onComplete }: { dissolving: boolean; on
       if (groupRef.current) {
         groupRef.current.position.x = targetX
         groupRef.current.position.y = targetY
-        groupRef.current.rotation.y += 0.004 * delta
+        groupRef.current.rotation.y += 0.010 * delta
       }
       return
     }

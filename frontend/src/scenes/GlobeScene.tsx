@@ -280,9 +280,9 @@ function GlobeMesh({
           entryCompleteRef.current = true
         }
       } else {
-        // Pause slow idle rotation if an entity is selected so it doesn't spin away under camera!
+        // Resume normal idle rotation (equal rotation speed for globe & data points)
         if (!selectedEntity) {
-          groupRef.current.rotation.y += 0.003 * delta
+          groupRef.current.rotation.y += 0.010 * delta
         }
       }
 
