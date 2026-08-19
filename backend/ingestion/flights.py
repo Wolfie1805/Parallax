@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from backend.config import settings
 from backend.database import SessionLocal
 from backend.models.events import Aircraft
+from backend.data.flight_catalog import EMBEDDED_FLIGHTS
 
 logger = logging.getLogger(__name__)
 
@@ -209,8 +210,8 @@ def get_cached_aircraft(limit: int = 500) -> list[dict]:
                 logger.warning("Failed to auto-fetch aircraft: %s", exc)
 
         if not aircraft:
-            logger.info("Using fallback aircraft states...")
-            return FALLBACK_AIRCRAFT
+            logger.info("Using embedded global flights catalog (%d aircraft)...", len(EMBEDDED_FLIGHTS))
+            return EMBEDDED_FLIGHTS
 
         return [
             {

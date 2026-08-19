@@ -108,7 +108,9 @@ app.add_middleware(
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(satellites.router)
+app.include_router(satellites.root_router)
 app.include_router(flights.router)
+app.include_router(flights.root_router)
 app.include_router(weather.router)
 app.include_router(ws_router)
 

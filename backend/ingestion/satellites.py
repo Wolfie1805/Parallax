@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import SessionLocal
 from backend.models.events import Satellite
+from backend.data.tle_catalog import FULL_EMBEDDED_TLES
 
 logger = logging.getLogger(__name__)
 
@@ -135,17 +136,11 @@ def propagate_all(db: Session | None = None, limit: int = 2000) -> list[dict]:
         db.close()
 
     if not satellites:
-        # Emergency fallback TLEs so satellites NEVER fail to render on cold start
-        logger.info("Using emergency fallback TLEs...")
+        # Full embedded TLE catalog (330+ real satellite TLE records) so satellites NEVER fail to render on cold start
+        logger.info("Using full embedded TLE catalog (%d records)...", len(FULL_EMBEDDED_TLES))
         t = _ts.now()
-        fallback_records = [
-            ("25544", "ISS (ZARYA)", "1 25544U 98067A   24050.52083333  .00016717  00000-0  30000-3 0  9993", "2 25544  51.6416 250.1234 0005678 120.4567 240.1234 15.49812345423456"),
-            ("20580", "HST (HUBBLE)", "1 20580U 90037B   24050.41234567  .00001234  00000-0  50000-4 0  9991", "2 20580  28.4690 180.1234 0002345  90.1234 270.1234 15.08123456812345"),
-            ("44713", "STARLINK-1007", "1 44713U 19074A   24050.31234567  .00002345  00000-0  10000-3 0  9992", "2 44713  53.0540 120.4567 0001234  45.1234 315.1234 15.06123456245678"),
-            ("48274", "TIANGONG (CSS)", "1 48274U 21035A   24050.61234567  .00012345  00000-0  20000-3 0  9994", "2 48274  41.4700 110.1234 0003456  60.1234 300.1234 15.60123456123456"),
-        ]
         results = []
-        for norad_id, name, line1, line2 in fallback_records:
+        for norad_id, name, line1, line2 in FULL_EMBEDDED_TLES:
             try:
                 earth_sat = EarthSatellite(line1, line2, name, _ts)
                 geo = earth_sat.at(t)

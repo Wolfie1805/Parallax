@@ -13,9 +13,11 @@ from backend.models.events import Satellite
 from backend.ingestion.satellites import propagate_all, fetch_and_store_tles
 
 router = APIRouter(prefix="/api/satellites", tags=["satellites"])
+root_router = APIRouter(prefix="/satellites", tags=["satellites"])
 
 
 @router.get("/")
+@root_router.get("/")
 def list_satellites(db: Session = Depends(get_db)):
     """Return all stored satellite records with computed lat/lng/altitude."""
     return propagate_all(db)
