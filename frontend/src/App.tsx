@@ -72,14 +72,18 @@ function SplashIntro({ onFinish }: { onFinish: () => void }) {
         style={{
           fontFamily: '"Syne", "Inter", sans-serif',
           fontWeight: 800,
-          fontSize: 54,
-          letterSpacing: '0.4em',
+          fontSize: 'clamp(30px, 8vw, 54px)',
+          letterSpacing: 'clamp(0.12em, 2.5vw, 0.4em)',
           background: 'linear-gradient(135deg, #ffffff 0%, #00e5ff 60%, #7c4dff 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           filter: 'drop-shadow(0 0 24px rgba(0, 229, 255, 0.7))',
           marginBottom: 16,
           position: 'relative',
+          textAlign: 'center',
+          padding: '0 16px',
+          maxWidth: '100vw',
+          overflow: 'hidden',
         }}
       >
         {typedText}
@@ -92,18 +96,20 @@ function SplashIntro({ onFinish }: { onFinish: () => void }) {
       <div
         style={{
           fontFamily: '"JetBrains Mono", monospace',
-          fontSize: 10,
-          letterSpacing: '0.3em',
+          fontSize: 'clamp(8px, 2.2vw, 10px)',
+          letterSpacing: 'clamp(0.12em, 1.5vw, 0.3em)',
           color: 'rgba(0, 229, 255, 0.75)',
           background: 'rgba(0, 229, 255, 0.06)',
           border: '1px solid rgba(0, 229, 255, 0.25)',
           borderRadius: 20,
-          padding: '4px 16px',
+          padding: '4px 14px',
           textTransform: 'uppercase',
           boxShadow: '0 0 16px rgba(0, 229, 255, 0.2)',
           opacity: typedText.length >= 4 ? 1 : 0,
           transform: typedText.length >= 4 ? 'translateY(0)' : 'translateY(8px)',
           transition: 'all 0.4s ease',
+          textAlign: 'center',
+          margin: '0 16px',
         }}
       >
         3D PLANETARY TELEMETRY NETWORK
@@ -145,36 +151,39 @@ function GlobeApp() {
       <div
         style={{
           position: 'fixed',
-          top: 24,
-          left: 28,
+          top: 'clamp(12px, 2.5vh, 24px)',
+          left: 'clamp(12px, 2.5vw, 28px)',
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          gap: 8,
           userSelect: 'none',
           zIndex: 100,
+          pointerEvents: 'none',
         }}
       >
         <span
           style={{
             fontFamily: '"Syne", sans-serif',
             fontWeight: 800,
-            fontSize: 16,
-            letterSpacing: '0.25em',
+            fontSize: 'clamp(13px, 2vw, 16px)',
+            letterSpacing: '0.22em',
             color: '#ffffff',
+            textShadow: '0 0 12px rgba(0, 229, 255, 0.5)',
           }}
         >
           PARALLAX
         </span>
         <span
+          className="hide-on-xs"
           style={{
             fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 10,
-            letterSpacing: '0.15em',
-            color: 'rgba(0, 229, 255, 0.7)',
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            color: 'rgba(0, 229, 255, 0.75)',
             background: 'rgba(0, 229, 255, 0.08)',
             border: '1px solid rgba(0, 229, 255, 0.2)',
             borderRadius: 4,
-            padding: '2px 8px',
+            padding: '2px 6px',
             textTransform: 'uppercase',
           }}
         >

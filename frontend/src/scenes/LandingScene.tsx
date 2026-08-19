@@ -190,8 +190,16 @@ function LandingGlobeScene({ dissolving, onComplete }: { dissolving: boolean; on
     const t = clock.getElapsedTime()
     globeMat.uniforms.uGlowIntensity.value = 0.5 + Math.sin(t * (Math.PI * 2 / 5)) * 0.3
 
+    const isMobile = window.innerWidth < 768
+    const targetX = isMobile ? 0 : 1.4
+    const targetY = isMobile ? 0.3 : -0.3
+
     if (!dissolving) {
-      if (groupRef.current) groupRef.current.rotation.y += 0.004 * delta
+      if (groupRef.current) {
+        groupRef.current.position.x = targetX
+        groupRef.current.position.y = targetY
+        groupRef.current.rotation.y += 0.004 * delta
+      }
       return
     }
 
@@ -209,8 +217,8 @@ function LandingGlobeScene({ dissolving, onComplete }: { dissolving: boolean; on
     const ease = 1 - Math.pow(1 - p, 3)
     camera.position.z = THREE.MathUtils.lerp(3.2, 1.3, ease)
     if (groupRef.current) {
-      groupRef.current.position.x = THREE.MathUtils.lerp(1.4, 0, ease)
-      groupRef.current.position.y = THREE.MathUtils.lerp(-0.3, 0, ease)
+      groupRef.current.position.x = THREE.MathUtils.lerp(targetX, 0, ease)
+      groupRef.current.position.y = THREE.MathUtils.lerp(targetY, 0, ease)
     }
 
     if (elapsed >= totalDuration && !doneFired.current) {
@@ -219,9 +227,14 @@ function LandingGlobeScene({ dissolving, onComplete }: { dissolving: boolean; on
     }
   })
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const initialX = isMobile ? 0 : 1.4
+  const initialY = isMobile ? 0.3 : -0.3
+  const initialScale = isMobile ? 0.95 : 1.4
+
   return (
     <group>
-      <group ref={groupRef} position={[1.4, -0.3, 0]} scale={[1.4, 1.4, 1.4]}>
+      <group ref={groupRef} position={[initialX, initialY, 0]} scale={[initialScale, initialScale, initialScale]}>
         <mesh>
           <sphereGeometry args={[0.998, 48, 48]} />
           <meshBasicMaterial color="#020510" depthWrite />
@@ -442,7 +455,7 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 40px',
+          padding: '0 clamp(16px, 4vw, 40px)',
           height: 64,
           background: 'rgba(2,3,5,0.6)',
           backdropFilter: 'blur(12px)',
@@ -450,13 +463,13 @@ export function LandingScene({ onStart }: LandingSceneProps) {
         }}
       >
         <div>
-          <div style={{ fontFamily: '"Syne", sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.28em', color: '#fff' }}>PARALLAX</div>
-          <div style={{ fontSize: 8.5, letterSpacing: '0.18em', color: 'rgba(0,229,255,0.5)', textTransform: 'uppercase', marginTop: 1 }}>
+          <div style={{ fontFamily: '"Syne", sans-serif', fontWeight: 800, fontSize: 'clamp(13px, 2vw, 15px)', letterSpacing: '0.24em', color: '#fff' }}>PARALLAX</div>
+          <div style={{ fontSize: 8, letterSpacing: '0.16em', color: 'rgba(0,229,255,0.5)', textTransform: 'uppercase', marginTop: 1 }}>
             REAL-TIME · SPATIALLY AWARE
           </div>
         </div>
 
-        <button className="launch-btn" onClick={triggerIgnition} style={{ padding: '7px 20px', fontSize: 11, borderRadius: 20 }}>
+        <button className="launch-btn" onClick={triggerIgnition} style={{ padding: '6px 16px', fontSize: 10, borderRadius: 20 }}>
           LAUNCH →
         </button>
       </div>
@@ -470,18 +483,19 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          padding: '0 64px',
-          paddingTop: 64,
-          maxWidth: 680,
+          padding: '0 clamp(16px, 5vw, 64px)',
+          paddingTop: 40,
+          paddingBottom: 80,
+          maxWidth: 'clamp(320px, 90vw, 680px)',
           opacity: dissolving ? 0 : 1,
           transform: dissolving ? 'translateX(-60px) scale(0.97)' : 'translateX(0) scale(1)',
           transition: 'opacity 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.4s cubic-bezier(0.16,1,0.3,1)',
           pointerEvents: dissolving ? 'none' : 'auto',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20, animation: 'fadeInBlur 0.8s 0.1s backwards' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, animation: 'fadeInBlur 0.8s 0.1s backwards' }}>
           <span className="eyebrow-dot" />
-          <span style={{ fontSize: 10, letterSpacing: '0.2em', color: '#00e5ff', textTransform: 'uppercase', fontFamily: '"JetBrains Mono", monospace' }}>
+          <span style={{ fontSize: 'clamp(8.5px, 1.8vw, 10px)', letterSpacing: '0.18em', color: '#00e5ff', textTransform: 'uppercase', fontFamily: '"JetBrains Mono", monospace' }}>
             3D TELEMETRY NETWORK
           </span>
         </div>
@@ -490,11 +504,11 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           style={{
             fontFamily: '"Syne", "Inter", sans-serif',
             fontWeight: 700,
-            fontSize: 58,
-            lineHeight: 1.06,
+            fontSize: 'clamp(28px, 6vw, 56px)',
+            lineHeight: 1.08,
             letterSpacing: '-0.02em',
             color: '#fff',
-            margin: '0 0 22px 0',
+            margin: '0 0 18px 0',
           }}
         >
           {['Every', ' ', 'operational', ' ', 'sphere', ' ', 'has', ' '].map((word, wi) =>
@@ -531,10 +545,10 @@ export function LandingScene({ onStart }: LandingSceneProps) {
 
         <p
           style={{
-            fontSize: 14,
-            lineHeight: 1.65,
-            color: 'rgba(255,255,255,0.55)',
-            margin: '0 0 34px 0',
+            fontSize: 'clamp(12px, 2.2vw, 14px)',
+            lineHeight: 1.6,
+            color: 'rgba(255,255,255,0.6)',
+            margin: '0 0 28px 0',
             fontFamily: '"JetBrains Mono", monospace',
             maxWidth: 480,
             animation: 'fadeInBlur 0.8s 0.4s backwards',
@@ -546,12 +560,12 @@ export function LandingScene({ onStart }: LandingSceneProps) {
 
         <div style={{ animation: 'fadeInBlur 0.8s 0.7s backwards' }}>
           <button className="launch-btn" onClick={triggerIgnition}>
-            <span style={{ fontSize: 16 }}>▶</span>
+            <span style={{ fontSize: 14 }}>▶</span>
             LAUNCH VISUALIZER →
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 32, animation: 'fadeInBlur 0.8s 0.9s backwards' }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 24, flexWrap: 'wrap', animation: 'fadeInBlur 0.8s 0.9s backwards' }}>
           <a href="https://github.com/Wolfie1805" target="_blank" rel="noopener noreferrer" className="social-square">
             <span>🐙</span> GitHub
           </a>
@@ -572,38 +586,41 @@ export function LandingScene({ onStart }: LandingSceneProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 40px',
-          height: 72,
-          background: 'rgba(2,3,5,0.75)',
-          backdropFilter: 'blur(12px)',
+          padding: '0 clamp(12px, 3vw, 40px)',
+          height: 'clamp(56px, 10vh, 72px)',
+          background: 'rgba(2,3,5,0.85)',
+          backdropFilter: 'blur(16px)',
           borderTop: '1px solid rgba(0,229,255,0.1)',
+          overflowX: 'auto',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div
               style={{
-                width: 7,
-                height: 7,
+                width: 6,
+                height: 6,
                 borderRadius: '50%',
                 background: '#00e676',
                 boxShadow: '0 0 8px #00e676',
                 animation: 'eyebrRowPulse 1.5s ease-in-out infinite',
               }}
             />
-            <span style={{ fontSize: 10, letterSpacing: '0.18em', color: '#00e676', fontFamily: '"JetBrains Mono", monospace' }}>LIVE NOW</span>
+            <span style={{ fontSize: 9, letterSpacing: '0.15em', color: '#00e676', fontFamily: '"JetBrains Mono", monospace' }}>LIVE</span>
           </div>
           <Sparkline />
         </div>
 
-        <div style={{ display: 'flex', gap: 56, alignItems: 'center' }}>
-          <StatItem icon="🛰️" label="OBJECTS TRACKED" value={objCount.toLocaleString()} />
-          <StatItem icon="✈️" label="DATA STREAMS" value={streamCount.toString()} />
-          <StatItem icon="🌐" label="WEATHER NODES" value={weatherCount.toLocaleString()} />
+        <div style={{ display: 'flex', gap: 'clamp(12px, 3vw, 48px)', alignItems: 'center', flexShrink: 1, overflowX: 'auto' }}>
+          <StatItem icon="🛰️" label="OBJECTS" value={objCount.toLocaleString()} />
+          <StatItem icon="✈️" label="STREAMS" value={streamCount.toString()} />
+          <StatItem icon="🌐" label="NODES" value={weatherCount.toLocaleString()} />
           <StatItem icon="⚡" label="LATENCY" value={`${latency}ms`} />
         </div>
 
-        <UTCClock />
+        <div className="hide-on-xs" style={{ flexShrink: 0 }}>
+          <UTCClock />
+        </div>
       </div>
     </div>
   )
@@ -611,11 +628,11 @@ export function LandingScene({ onStart }: LandingSceneProps) {
 
 function StatItem({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: 16, opacity: 0.7 }}>{icon}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 14, opacity: 0.7 }}>{icon}</span>
       <div>
-        <div style={{ fontSize: 8.5, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 2 }}>{label}</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.04em' }}>{value}</div>
+        <div style={{ fontSize: 8, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 1 }}>{label}</div>
+        <div style={{ fontSize: 'clamp(12px, 2vw, 15px)', fontWeight: 700, color: '#fff', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.04em' }}>{value}</div>
       </div>
     </div>
   )

@@ -1,9 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUniverseStore } from '../state/universeStore'
 import type { UniverseType } from '../state/universeStore'
 import { getSatelliteCategoryInfo } from '../universes/SatelliteUniverse'
+
+function useEffectWindowWidthMobile(): [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640)
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  return [isMobile, setIsMobile]
+}
 
 const THEMES: Record<UniverseType, {
   accent: string
@@ -320,6 +330,8 @@ export function DetailCard() {
   const selectedEntity = useUniverseStore((s) => s.selectedEntity)
   const setSelectedEntity = useUniverseStore((s) => s.setSelectedEntity)
 
+  const [isMobile, setIsMobile] = useEffectWindowWidthMobile()
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setSelectedEntity(null)
@@ -336,28 +348,51 @@ export function DetailCard() {
       return (
         <motion.div
           key={type + JSON.stringify((data as any).norad_id ?? (data as any).icao24 ?? (data as any).id)}
-          initial={{ opacity: 0, x: 60, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 60, scale: 0.95 }}
+          initial={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, x: 60, scale: 0.95 }}
+          animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, x: 0, scale: 1 }}
+          exit={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, x: 60, scale: 0.95 }}
           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-          style={{
-            position: 'fixed',
-            top: '50%',
-            right: 32,
-            transform: 'translateY(-50%)',
-            width: 300,
-            background: 'rgba(8, 14, 28, 0.92)',
-            border: `1px solid ${theme.accent}`,
-            borderRadius: 12,
-            boxShadow: `0 0 32px ${theme.glow}, 0 0 0 1px ${theme.accent}22`,
-            padding: '22px 24px',
-            backdropFilter: 'blur(20px)',
-            color: '#c5cae9',
-            fontFamily: '"JetBrains Mono", monospace',
-            zIndex: 9999,
-            userSelect: 'none',
-            overflow: 'hidden',
-          }}
+          style={
+            isMobile
+              ? {
+                  position: 'fixed',
+                  bottom: 'max(12px, env(safe-area-inset-bottom))',
+                  left: 12,
+                  right: 12,
+                  width: 'auto',
+                  maxHeight: '65vh',
+                  background: 'rgba(8, 14, 28, 0.95)',
+                  border: `1px solid ${theme.accent}`,
+                  borderRadius: 16,
+                  boxShadow: `0 -4px 32px ${theme.glow}`,
+                  padding: '16px 18px',
+                  backdropFilter: 'blur(20px)',
+                  color: '#c5cae9',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  zIndex: 9999,
+                  userSelect: 'none',
+                  overflowY: 'auto',
+                }
+              : {
+                  position: 'fixed',
+                  top: '50%',
+                  right: 32,
+                  transform: 'translateY(-50%)',
+                  width: 300,
+                  maxHeight: '80vh',
+                  background: 'rgba(8, 14, 28, 0.92)',
+                  border: `1px solid ${theme.accent}`,
+                  borderRadius: 12,
+                  boxShadow: `0 0 32px ${theme.glow}, 0 0 0 1px ${theme.accent}22`,
+                  padding: '22px 24px',
+                  backdropFilter: 'blur(20px)',
+                  color: '#c5cae9',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  zIndex: 9999,
+                  userSelect: 'none',
+                  overflowY: 'auto',
+                }
+          }
         >
           {/* Scan-Line Sweep Reveal Effect */}
           <motion.div

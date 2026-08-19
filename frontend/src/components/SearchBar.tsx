@@ -195,10 +195,11 @@ export function SearchBar() {
       ref={containerRef}
       style={{
         position: 'fixed',
-        top: 24,
+        top: 'clamp(12px, 2.5vh, 24px)',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 340,
+        width: 'clamp(180px, 45vw, 360px)',
+        maxWidth: 'calc(100vw - 120px)',
         zIndex: 1000,
         fontFamily: '"JetBrains Mono", monospace',
       }}
